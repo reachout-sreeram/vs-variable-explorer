@@ -1,0 +1,134 @@
+{
+  "name": "vscode-varexplorer",
+  "displayName": "Spyder Variable Explorer",
+  "description": "Spyder-style Variable Explorer and IPython Console for VSCode.",
+  "version": "0.1.0",
+  "publisher": "sakethsreeram",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "extensionDependencies": [
+    "ms-python.python"
+  ],
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "varexp",
+          "title": "Variables",
+          "icon": "$(symbol-variable)"
+        }
+      ],
+      "panel": [
+        {
+          "id": "varexp-console",
+          "title": "IPython Console",
+          "icon": "$(terminal)"
+        }
+      ]
+    },
+    "views": {
+      "varexp": [
+        {
+          "type": "webview",
+          "id": "varexp.variables",
+          "name": "Variables"
+        }
+      ],
+      "varexp-console": [
+        {
+          "type": "webview",
+          "id": "varexp.console",
+          "name": "IPython Console"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "varexp.start",
+        "title": "Variables: Start Console"
+      },
+      {
+        "command": "varexp.refresh",
+        "title": "Variables: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "varexp.runSelection",
+        "title": "Variables: Run Selection/Line in IPython Console"
+      },
+      {
+        "command": "varexp.runFile",
+        "title": "Variables: Run File in IPython Console",
+        "icon": "$(play-circle)"
+      },
+      {
+        "command": "varexp.clearVariables",
+        "title": "Variables: Clear Variables",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "varexp.clearConsole",
+        "title": "Variables: Clear Console",
+        "icon": "$(trash)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "varexp.refresh",
+          "when": "view == varexp.variables",
+          "group": "navigation"
+        },
+        {
+          "command": "varexp.clearVariables",
+          "when": "view == varexp.variables",
+          "group": "navigation"
+        },
+        {
+          "command": "varexp.clearConsole",
+          "when": "view == varexp.console",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "varexp.runSelection",
+          "when": "editorTextFocus && editorLangId == python",
+          "group": "1_run"
+        },
+        {
+          "command": "varexp.runFile",
+          "when": "editorTextFocus && editorLangId == python",
+          "group": "1_run"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "varexp.runFile",
+          "when": "editorTextFocus && editorLangId == python",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --format=cjs",
+    "watch": "esbuild src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --platform=node --format=cjs --watch"
+  },
+  "dependencies": {
+    "@vscode/python-extension": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.3.3"
+  }
+}
