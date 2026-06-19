@@ -1,75 +1,104 @@
-# Spyder-style Variable Explorer & IPython Console for VSCode
+# Variable Explorer & IPython Console for VSCode
 
-A Visual Studio Code extension that provides a read-only variable explorer side-panel and a bottom-docked IPython console, bringing Spyder's interactive data exploration workflow directly into VSCode.
+**Spyder-style variable inspection, without leaving your editor.**
 
-## About
+A live variable explorer in the sidebar and a real IPython console in the panel — so you can run a script, watch your variables populate, and click into any DataFrame, array, or nested dict the moment it exists.
 
-This repository contains a lightweight, zero-dependency-compiling VSCode extension that integrates a side-panel variable explorer and a bottom-docked IPython console. By communicating with an isolated Python gateway process over stdin/stdout, it performs safe built-in namespace introspection to track variables in real time.
-
-## Inspiration & Motivation
-
-Inspired by the interactive data science workflows of MATLAB and Spyder, this extension was built to address the lack of a native, real-time variable explorer panel in VSCode for standard `.py` script files. It bridges the gap between structured script-based coding and rapid, hands-on data matrix inspection without the overhead of Jupyter Notebooks.
+> **Requires:** VSCode `^1.90` · the `ms-python.python` extension · a Python environment with `jupyter_client`, `ipykernel`, `pyzmq`, and `spyder-kernels` · MIT licensed · contributions welcome.
 
 ---
 
-## Features
+## Why this exists
 
-- **Variables Explorer Sidebar**:
-  - Automatically updates as you execute code in the console.
-  - Interactive table displaying variable names, types, sizes, and value previews.
-  - Quick filter-by-name/type search bar.
-  - Color-coded badges for common data types.
-- **IPython Console**:
-  - Full IPython prompt (`In [N]:` / `Out[N]:`) in the bottom panel next to VSCode Terminal.
-  - Keeps command history (use Up/Down arrow keys to recall previous commands).
-  - Streams prints, logs, execution results, and runtime errors in real time.
-- **DataFrame Grid & JSON Tree Details**:
-  - Inspect DataFrames, Series, and 2D NumPy arrays in a tabular grid with sorting and sticky headers.
-  - Explore dictionaries, lists, and JSON-like objects in a collapsible tree representation.
-  - Dynamic 2-axis paging (200 rows × 50 columns) for high-performance matrix viewing.
-- **Run Selections and Files**:
-  - **Run Selection**: Highlight any Python code block, right-click, and select `Variables: Run Selection/Line in IPython Console` to run it.
-  - **Run File**: Click the play-circle button in the editor toolbar. Executes via a clean `runfile('path', wdir='dir')` command without echoing the entire file text inside the console.
-- **Context Preservation**:
-  - Changing tabs (e.g. from Variable Explorer to File Explorer, or from IPython Console to Terminal) does not reset console outputs, scroll positions, or active paginations.
-- **Independent Clear Actions**:
-  - **Clear Console**: Click the trash icon in the console panel or press `Cmd+K` (macOS) / `Ctrl+K` (Windows/Linux) to clear console logs and reset prompt counters back to `In [1]:`.
-  - **Clear Variables**: Click the trash icon in the variables sidebar to wipe the IPython kernel's user namespace (`%reset -f`).
+VSCode has a first-class debugger and a great Jupyter story — but neither covers the everyday loop that Spyder users rely on: open a plain `.py` file, run it top-to-bottom or line-by-line, and *keep poking at the resulting state* in an explorer that's always on screen. The debugger only shows variables while you're paused on a breakpoint; notebooks force you to restructure your code into cells.
 
----
+This extension brings that variable-inspection loop to VSCode. It runs your scripts in a persistent IPython kernel, surfaces every variable in a sortable sidebar, and lets you open a spreadsheet-style grid for any DataFrame, `ndarray`, or Series — all against ordinary script files, no `.ipynb` required.
 
-## Dependencies
+> **Scope:** this is a variable explorer and console, not a full Spyder replacement. It focuses on inspecting data and namespace state — there is no plot pane, profiler, or debugger of its own.
 
-1. **VSCode Python Extension**:
-   - The extension relies on `ms-python.python` to resolve python environments.
-2. **Python Packages**:
-   - The active Python environment must have `jupyter_client`, `ipykernel`, and `pyzmq` installed.
-   - For introspection capabilities, install `spyder-kernels` (version `3.1.4` is recommended):
-     ```bash
-     pip install jupyter_client ipykernel pyzmq spyder-kernels==3.1.4
-     ```
+## Highlights
 
----
+- **Always-on variable explorer** — a sidebar table of names, types, sizes, and value previews that refreshes automatically as code runs, with a live filter and color-coded type badges.
+- **A genuine IPython console** — full `In [N]:` / `Out[N]:` prompts docked next to the integrated terminal, with command history (Up/Down), streamed stdout/stderr, and real tracebacks.
+- **Click-to-inspect data** — open DataFrames, Series, and 2-D NumPy arrays in a sortable grid with sticky headers; explore dicts, lists, and JSON-like objects as a collapsible tree.
+- **Built for big data** — a 2-axis pager (200 rows × 50 columns per slice) keeps million-cell matrices responsive instead of freezing the webview.
+- **Run the way you think** — right-click any selection to *Run Selection/Line*, or hit the editor toolbar button to *Run File* via a clean `runfile(path, wdir=...)` that doesn't echo the whole script back at you.
+- **State that survives tab switches** — `retainContextWhenHidden` keeps console output, scroll position, and active pagination intact when you flip between the explorer and the file tree.
+- **Independent clears** — wipe console history (`Cmd/Ctrl+K`) and reset the kernel namespace (`%reset -f`) separately, each with its own toolbar action.
 
-## Getting Started
+## How it works
 
-1. **Launch the Extension**:
-   - Open this directory in VSCode.
-   - Press `F5` to start a new VSCode Extension Development Host instance.
-2. **Boot the Console**:
-   - In the Extension Development Host window, open a Python file.
-   - Run the command `Variables: Start Console` from the VSCode Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`).
-   - The sidebar variable explorer and the bottom IPython console panel will activate.
-3. **Explore Data**:
-   - Run a script or enter commands directly in the console input box:
-     ```python
-     import pandas as pd
-     import numpy as np
-     
-     # Create some variables
-     x = 42
-     data = {'names': ['Alice', 'Bob'], 'scores': [95, 88]}
-     df = pd.DataFrame(data)
-     arr = np.random.rand(1000, 100) # Grid detail supports pagination!
-     ```
-   - Watch the variables pop up in the sidebar. Click a row to open its detail panel!
+To avoid native ZeroMQ builds inside Node, the extension uses a **TypeScript + Python IPC gateway** design:
+
+```
+ VSCode Extension (TypeScript)                stdin/stdout
+ ┌───────────────┐  ┌──────────────────┐      (JSON lines)     ┌────────────────────┐
+ │  Console UI   │  │ Variables / Detail│  ───────────────────▶│  python/gateway.py │
+ │  (webview)    │  │   panels (webview)│  ◀───────────────────│  jupyter_client +  │
+ └───────┬───────┘  └─────────┬─────────┘                      │  local ipykernel   │
+         └────── KernelManager ┘                               └─────────┬──────────┘
+                                                                  ZeroMQ │ TCP
+                                                               IPython kernel process
+```
+
+The extension host spawns `python/gateway.py`, which connects to a local IPython kernel over ZMQ and relays Jupyter messages back as newline-delimited JSON. Introspection is delegated to `spyder-kernels` (`make_remote_view`, `value_to_display`) so variable metadata is read safely without polluting user output. Full details — IPC protocol, bootstrapping, and pagination internals — live in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
+
+## Requirements
+
+| Requirement | Notes |
+| --- | --- |
+| VSCode | `^1.90.0` |
+| [`ms-python.python`](https://marketplace.visualstudio.com/items?itemName=ms-python.python) | Used to resolve the active interpreter (declared as an extension dependency) |
+| Python packages | `jupyter_client`, `ipykernel`, `pyzmq`, and `spyder-kernels==3.1.4` (recommended) for introspection |
+
+Install the Python side into your selected environment:
+
+```bash
+pip install jupyter_client ipykernel pyzmq spyder-kernels==3.1.4
+```
+
+## Getting started
+
+This repo currently runs from source via the Extension Development Host:
+
+```bash
+git clone https://github.com/reachout-sreeram/vs-variable-explorer.git
+cd vs-variable-explorer
+npm install
+npm run compile      # or `npm run watch` for rebuilds on save
+```
+
+1. Open the folder in VSCode and press <kbd>F5</kbd> to launch the Extension Development Host.
+2. In the new window, open a Python file and run **`Variables: Start Console`** from the Command Palette (<kbd>Cmd/Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>).
+3. Start exploring:
+
+```python
+import pandas as pd
+import numpy as np
+
+x = 42
+data = {"names": ["Alice", "Bob"], "scores": [95, 88]}
+df = pd.DataFrame(data)
+arr = np.random.rand(1000, 100)   # paginated grid keeps this snappy
+```
+
+Variables appear in the sidebar as they're created — click any row to open its detail view.
+
+## Commands & shortcuts
+
+| Action | Command | Where |
+| --- | --- | --- |
+| Start the kernel + panels | `Variables: Start Console` | Command Palette |
+| Run selection or current line | `Variables: Run Selection/Line in IPython Console` | Editor right-click |
+| Run the whole file | `Variables: Run File in IPython Console` | Editor toolbar (▶) |
+| Refresh the explorer | `Variables: Refresh` | Explorer title bar |
+| Clear console + reset prompt | `Variables: Clear Console` · <kbd>Cmd/Ctrl</kbd>+<kbd>K</kbd> | Console title bar |
+| Reset kernel namespace (`%reset -f`) | `Variables: Clear Variables` | Explorer title bar |
+
+## Contributing
+
+Contributions are welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) for environment setup, the build/test loop (`npm run compile`, `python test/snippet_smoke_test.py`), and PR conventions. Issues and feature ideas are equally valued.
+
+## License
+
+Released under the [MIT License](./LICENSE).
