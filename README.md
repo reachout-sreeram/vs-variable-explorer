@@ -2,6 +2,14 @@
 
 A Visual Studio Code extension that provides a read-only variable explorer side-panel and a bottom-docked IPython console, bringing Spyder's interactive data exploration workflow directly into VSCode.
 
+## About
+
+This repository contains a lightweight, zero-dependency-compiling VSCode extension that integrates a side-panel variable explorer and a bottom-docked IPython console. By communicating with an isolated Python gateway process over stdin/stdout, it performs safe built-in namespace introspection to track variables in real time.
+
+## Inspiration & Motivation
+
+Inspired by the interactive data science workflows of MATLAB and Spyder, this extension was built to address the lack of a native, real-time variable explorer panel in VSCode for standard `.py` script files. It bridges the gap between structured script-based coding and rapid, hands-on data matrix inspection without the overhead of Jupyter Notebooks.
+
 ---
 
 ## Features
