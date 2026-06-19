@@ -1,0 +1,214 @@
+:root {
+  --font-family-mono: var(--vscode-editor-font-family, Menlo, Monaco, Consolas, "Courier New", monospace);
+  --font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  --border-radius: 6px;
+  --transition-speed: 0.2s;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-editor-background, #1e1e1e);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.console-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--vscode-panel-background, #1e1e1e);
+  border-bottom: 1px solid var(--vscode-panel-border, #2d2d2d);
+  z-index: 10;
+}
+
+.console-header .title {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--vscode-descriptionForeground, #cccccc);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.status-indicator.idle {
+  background-color: rgba(78, 201, 176, 0.1);
+  color: #4ec9b0;
+}
+
+.status-indicator.idle .indicator-dot {
+  background-color: #4ec9b0;
+}
+
+.status-indicator.busy {
+  background-color: rgba(206, 145, 120, 0.1);
+  color: #ce9178;
+}
+
+.status-indicator.busy .indicator-dot {
+  background-color: #ce9178;
+  animation: pulse 1.2s infinite ease-in-out;
+}
+
+.status-indicator.starting {
+  background-color: rgba(156, 220, 254, 0.1);
+  color: #9cdcfe;
+}
+
+.status-indicator.starting .indicator-dot {
+  background-color: #9cdcfe;
+  animation: pulse 1.2s infinite ease-in-out;
+}
+
+.indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+.console-output {
+  flex-grow: 1;
+  padding: 16px;
+  overflow-y: auto;
+  font-family: var(--font-family-mono);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: 1.5;
+}
+
+.system-message {
+  color: var(--vscode-descriptionForeground, #888888);
+  font-style: italic;
+  margin-bottom: 12px;
+}
+
+.output-row {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-echo {
+  display: flex;
+  margin-bottom: 4px;
+}
+
+.prompt-symbol {
+  width: 65px;
+  min-width: 65px;
+  color: var(--vscode-symbolIcon-functionForeground, #dcdcaa);
+  font-weight: bold;
+  user-select: none;
+}
+
+.prompt-out-symbol {
+  width: 65px;
+  min-width: 65px;
+  color: var(--vscode-symbolIcon-variableForeground, #9cdcfe);
+  font-weight: bold;
+  user-select: none;
+}
+
+.code-content {
+  flex-grow: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--vscode-editor-foreground, #d4d4d4);
+}
+
+.output-stream {
+  display: flex;
+  margin-top: 4px;
+}
+
+.stream-content {
+  flex-grow: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.stream-content.stdout {
+  color: var(--vscode-debugConsole-infoForeground, #cccccc);
+}
+
+.stream-content.stderr {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.stream-content.result {
+  color: var(--vscode-debugConsole-infoForeground, #b5cea8);
+}
+
+.error-traceback {
+  background-color: rgba(244, 135, 113, 0.05);
+  border-left: 3px solid var(--vscode-errorForeground, #f48771);
+  padding: 8px 12px;
+  margin-top: 4px;
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--vscode-errorForeground, #f48771);
+  font-size: 12px;
+}
+
+.console-input-area {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 0px 24px 0px;
+  background: transparent;
+}
+
+.prompt-label {
+  flex-shrink: 0;
+  padding-right: 8px;
+  font-family: var(--font-family-mono);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: 1.5;
+  color: var(--vscode-symbolIcon-functionForeground, #dcdcaa);
+  font-weight: bold;
+  user-select: none;
+  white-space: nowrap;
+}
+
+#console-input {
+  flex: 1;
+  background: transparent;
+  color: var(--vscode-editor-foreground, #d4d4d4);
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-family-mono);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: 1.5;
+  caret-color: var(--vscode-terminalCursor-foreground, #aeafad);
+  box-sizing: border-box;
+  min-width: 0;
+}
