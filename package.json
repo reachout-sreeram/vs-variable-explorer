@@ -2,16 +2,38 @@
   "name": "vscode-varexplorer",
   "displayName": "Spyder Variable Explorer",
   "description": "Spyder-style Variable Explorer and IPython Console for VSCode.",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "sakethsreeram",
+  "icon": "media/icon.png",
+  "license": "MIT",
+  "author": {
+    "name": "Saketh Sreeram",
+    "url": "https://github.com/reachout-sreeram"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/reachout-sreeram/vs-variable-explorer.git"
   },
+  "bugs": {
+    "url": "https://github.com/reachout-sreeram/vs-variable-explorer/issues"
+  },
+  "homepage": "https://github.com/reachout-sreeram/vs-variable-explorer#readme",
+  "qna": "https://github.com/reachout-sreeram/vs-variable-explorer/issues",
+  "keywords": [
+    "python",
+    "variable explorer",
+    "ipython",
+    "spyder",
+    "dataframe",
+    "jupyter",
+    "data science"
+  ],
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
+    "Data Science",
+    "Visualization",
     "Other"
   ],
   "main": "./dist/extension.js",

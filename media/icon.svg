@@ -1,0 +1,39 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Variable Explorer">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="256" y2="256" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6D5BF6"/>
+      <stop offset="0.55" stop-color="#5B4BE0"/>
+      <stop offset="1" stop-color="#3D2FB0"/>
+    </linearGradient>
+    <linearGradient id="cell" x1="92" y1="92" x2="172" y2="172" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9FE8FF"/>
+      <stop offset="1" stop-color="#56C8F2"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#1A1147" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- rounded app badge -->
+  <rect x="12" y="12" width="232" height="232" rx="54" fill="url(#bg)"/>
+  <rect x="12.5" y="12.5" width="231" height="231" rx="53.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.12"/>
+
+  <!-- data grid: rows of variable cells -->
+  <g filter="url(#soft)">
+    <!-- column header underline -->
+    <rect x="64" y="74" width="128" height="10" rx="5" fill="#FFFFFF" fill-opacity="0.85"/>
+
+    <!-- row 1 -->
+    <rect x="64" y="100" width="36" height="14" rx="7" fill="#FFFFFF" fill-opacity="0.40"/>
+    <rect x="112" y="100" width="80" height="14" rx="7" fill="#FFFFFF" fill-opacity="0.22"/>
+
+    <!-- row 2 (highlighted / selected variable) -->
+    <rect x="56" y="124" width="144" height="26" rx="13" fill="url(#cell)"/>
+    <rect x="68" y="133" width="30" height="8" rx="4" fill="#0E2A52" fill-opacity="0.55"/>
+    <rect x="110" y="133" width="60" height="8" rx="4" fill="#0E2A52" fill-opacity="0.30"/>
+
+    <!-- row 3 -->
+    <rect x="64" y="160" width="36" height="14" rx="7" fill="#FFFFFF" fill-opacity="0.40"/>
+    <rect x="112" y="160" width="80" height="14" rx="7" fill="#FFFFFF" fill-opacity="0.22"/>
+  </g>
+</svg>
