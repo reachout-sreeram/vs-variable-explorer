@@ -4,6 +4,10 @@
   "description": "Spyder-style Variable Explorer and IPython Console for VSCode.",
   "version": "0.1.0",
   "publisher": "sakethsreeram",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reachout-sreeram/vs-variable-explorer.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
