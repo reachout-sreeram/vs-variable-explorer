@@ -49,7 +49,7 @@
     if (detail.kind === "dataframe") {
       renderDataFrame(detail);
     } else if (detail.kind === "json") {
-      renderJSONTree(detail.data);
+      renderJSONTree(detail.data, detail.type);
     } else if (detail.kind === "scalar") {
       renderScalar(detail.data);
     }
@@ -288,16 +288,16 @@
     contentContainer.appendChild(gridContainer);
   }
 
-  function renderJSONTree(data) {
+  function renderJSONTree(data, rootType) {
     const treeContainer = document.createElement("div");
     treeContainer.className = "tree-container";
 
-    const rootNode = buildTreeDOM("Root", data, true);
+    const rootNode = buildTreeDOM("Root", data, true, rootType);
     treeContainer.appendChild(rootNode);
     contentContainer.appendChild(treeContainer);
   }
 
-  function buildTreeDOM(key, val, isLast = true) {
+  function buildTreeDOM(key, val, isLast = true, overrideType = null) {
     const node = document.createElement("div");
     node.className = "tree-node";
 
@@ -326,7 +326,8 @@
       const size = isArray ? val.length : Object.keys(val).length;
       const typeDesc = document.createElement("span");
       typeDesc.className = "tree-value type-desc";
-      typeDesc.innerText = isArray ? `list (${size} items)` : `dict (${size} items)`;
+      const typeName = overrideType ? overrideType : (isArray ? "list" : "dict");
+      typeDesc.innerText = `${typeName} (${size} items)`;
       row.appendChild(typeDesc);
 
       node.appendChild(row);

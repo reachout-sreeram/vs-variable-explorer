@@ -3,18 +3,19 @@ import { Detail } from '../types';
 import { KernelManager } from '../kernel/KernelManager';
 
 export class DetailPanel {
-  public static currentPanel: DetailPanel | undefined;
+  private static readonly panels = new Map<string, DetailPanel>();
   private readonly panel: vscode.WebviewPanel;
   private disposables: vscode.Disposable[] = [];
+  private readonly name: string;
 
   public static createOrShow(extensionUri: vscode.Uri, detail: Detail, kernelManager: KernelManager) {
     const name = 'error' in detail ? 'Error' : detail.name;
     const title = `Variable: ${name}`;
 
-    if (DetailPanel.currentPanel) {
-      DetailPanel.currentPanel.panel.title = title;
-      DetailPanel.currentPanel.panel.reveal(vscode.ViewColumn.Active);
-      DetailPanel.currentPanel.update(detail);
+    const existingPanel = DetailPanel.panels.get(name);
+    if (existingPanel) {
+      existingPanel.panel.reveal(vscode.ViewColumn.Active);
+      existingPanel.update(detail);
       return;
     }
 
@@ -30,15 +31,18 @@ export class DetailPanel {
       }
     );
 
-    DetailPanel.currentPanel = new DetailPanel(panel, extensionUri, detail, kernelManager);
+    const detailPanel = new DetailPanel(panel, extensionUri, detail, kernelManager, name);
+    DetailPanel.panels.set(name, detailPanel);
   }
 
   private constructor(
     panel: vscode.WebviewPanel,
     private readonly extensionUri: vscode.Uri,
     detail: Detail,
-    private readonly kernelManager: KernelManager
+    private readonly kernelManager: KernelManager,
+    name: string
   ) {
+    this.name = name;
     this.panel = panel;
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
     
@@ -79,7 +83,7 @@ export class DetailPanel {
   }
 
   public dispose() {
-    DetailPanel.currentPanel = undefined;
+    DetailPanel.panels.delete(this.name);
     this.panel.dispose();
     while (this.disposables.length) {
       const x = this.disposables.pop();
