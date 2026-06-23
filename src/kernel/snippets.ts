@@ -57,7 +57,7 @@ def __vexp_setup():
             payload["row_limit"] = row_limit
             payload["col_offset"] = col_offset
             payload["col_limit"] = col_limit
-        elif isinstance(obj, (dict, list, tuple)):
+        elif isinstance(obj, (dict, list, tuple, set, frozenset)):
             payload["kind"] = "json"
             payload["data"] = _json_safe(obj)
         else:
@@ -70,7 +70,7 @@ def __vexp_setup():
             return str(o)
         if isinstance(o, dict):
             return {str(k): _json_safe(v, depth+1) for k, v in list(o.items())[:1000]}
-        if isinstance(o, (list, tuple)):
+        if isinstance(o, (list, tuple, set, frozenset)):
             return [_json_safe(x, depth+1) for x in list(o)[:1000]]
         if isinstance(o, (str, int, float, bool)) or o is None:
             return o

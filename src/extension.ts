@@ -52,7 +52,22 @@ export function activate(context: vscode.ExtensionContext) {
           // Focus the Console UI at the bottom
           vscode.commands.executeCommand('varexp.console.focus');
         } catch (err: any) {
-          vscode.window.showErrorMessage(`Failed to start kernel: ${err.message}`);
+          const installCmd = "Install Dependencies";
+          const selectInt = "Select Python Interpreter";
+          vscode.window.showErrorMessage(
+            `Failed to start kernel: ${err.message}`,
+            installCmd,
+            selectInt
+          ).then(choice => {
+            if (choice === installCmd) {
+              const pythonPath = kernelManager.getPythonPath();
+              const terminal = vscode.window.createTerminal("Install Variable Explorer Dependencies");
+              terminal.sendText(`"${pythonPath}" -m pip install jupyter_client ipykernel pyzmq spyder-kernels==3.1.4`);
+              terminal.show();
+            } else if (choice === selectInt) {
+              vscode.commands.executeCommand('python.setInterpreter');
+            }
+          });
         }
       });
     })

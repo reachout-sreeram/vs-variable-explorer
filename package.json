@@ -2,7 +2,7 @@
   "name": "vscode-varexplorer",
   "displayName": "Spyder Variable Explorer",
   "description": "Spyder-style Variable Explorer and IPython Console for VSCode.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "sakethsreeram",
   "icon": "media/icon.png",
   "license": "MIT",

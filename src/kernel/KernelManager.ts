@@ -69,6 +69,12 @@ export class KernelManager {
     }
   }
 
+  private resolvedPythonPath = 'python';
+
+  public getPythonPath(): string {
+    return this.resolvedPythonPath;
+  }
+
   public async start(): Promise<void> {
     if (this.process) {
       return;
@@ -88,59 +94,136 @@ export class KernelManager {
     } catch (e) {
       console.warn("Failed to retrieve Python path via Python extension, falling back to default 'python'", e);
     }
+    this.resolvedPythonPath = pythonPath;
 
     const gatewayScript = path.join(this.context.extensionPath, 'python', 'gateway.py');
     console.log(`Spawning gateway: ${pythonPath} -u ${gatewayScript}`);
 
     // 2. Spawn python gateway
-    this.process = child_process.spawn(pythonPath, ['-u', gatewayScript], {
+    const proc = child_process.spawn(pythonPath, ['-u', gatewayScript], {
       cwd: this.context.extensionPath
     });
+    this.process = proc;
 
-    this.process.stderr?.on('data', (data) => {
-      console.error(`[Python Gateway stderr] ${data.toString()}`);
-    });
-
-    this.process.on('close', (code) => {
-      console.log(`Gateway process closed with code ${code}`);
-      this.process = null;
-      this.updateStatus('starting');
+    let stderrAccumulator = "";
+    proc.stderr?.on('data', (data) => {
+      const chunk = data.toString();
+      console.error(`[Python Gateway stderr] ${chunk}`);
+      stderrAccumulator += chunk;
     });
 
     // 3. Setup line-by-line listener
     const rl = readline.createInterface({
-      input: this.process.stdout!,
+      input: proc.stdout!,
       terminal: false
     });
 
-    return new Promise((resolve, reject) => {
-      let isReady = false;
+    return new Promise<void>((resolve, reject) => {
+      let completed = false;
+
+      const cleanup = () => {
+        completed = true;
+        clearTimeout(timeoutId);
+        proc.off('close', onClose);
+        proc.off('error', onError);
+      };
+
+      const timeoutId = setTimeout(() => {
+        if (!completed) {
+          cleanup();
+          proc.kill();
+          if (this.process === proc) {
+            this.process = null;
+            this.updateStatus('starting');
+          }
+          rl.close();
+          
+          let detail = "";
+          if (stderrAccumulator.trim()) {
+            detail = `\n\nDetails:\n${stderrAccumulator.trim()}`;
+          }
+          reject(new Error(`Gateway connection timed out. Make sure 'jupyter-client' and 'ipykernel' are installed in the selected environment.${detail}`));
+        }
+      }, 15000);
+
+      const onClose = (code: number | null) => {
+        if (!completed) {
+          cleanup();
+          if (this.process === proc) {
+            this.process = null;
+            this.updateStatus('starting');
+          }
+          rl.close();
+
+          let detail = "";
+          if (stderrAccumulator.trim()) {
+            detail = `\n\nDetails:\n${stderrAccumulator.trim()}`;
+          } else {
+            detail = ` (exited with code ${code})`;
+          }
+          reject(new Error(`Gateway process exited unexpectedly.${detail}`));
+        }
+      };
+
+      const onError = (err: Error) => {
+        if (!completed) {
+          cleanup();
+          if (this.process === proc) {
+            this.process = null;
+            this.updateStatus('starting');
+          }
+          rl.close();
+          reject(new Error(`Failed to spawn Python gateway process: ${err.message}`));
+        }
+      };
+
+      proc.on('close', onClose);
+      proc.on('error', onError);
 
       rl.on('line', (line) => {
         try {
           const payload = JSON.parse(line.trim());
           this.handleGatewayMessage(payload);
           
-          if (!isReady && payload.type === 'status' && payload.status === 'ready') {
-            isReady = true;
-            this.updateStatus('ready');
-            // Inject bootstrap
-            this.bootstrapKernel().then(() => {
+          if (!completed) {
+            if (payload.type === 'status' && payload.status === 'ready') {
+              completed = true;
+              clearTimeout(timeoutId);
+              proc.off('close', onClose);
+              proc.off('error', onError);
               resolve();
-            }).catch(reject);
+            } else if (payload.type === 'error') {
+              cleanup();
+              proc.kill();
+              if (this.process === proc) {
+                this.process = null;
+                this.updateStatus('starting');
+              }
+              rl.close();
+              reject(new Error(payload.message || "Failed to start IPython kernel."));
+            }
           }
         } catch (e) {
           // Non-JSON output or parsing error
           console.debug(`[Gateway output non-JSON]: ${line}`);
         }
       });
-
-      // Timeout if gateway fails to boot
-      setTimeout(() => {
-        if (!isReady) {
-          reject(new Error("Gateway connection timed out. Make sure 'jupyter-client' and 'ipykernel' are installed in the selected environment."));
+    }).then(async () => {
+      // Process has successfully declared it's ready.
+      // Setup the long-running close handler for the process
+      proc.on('close', (code) => {
+        console.log(`Gateway process closed with code ${code}`);
+        if (this.process === proc) {
+          this.process = null;
+          this.updateStatus('starting');
         }
-      }, 15000);
+        rl.close();
+      });
+
+      this.updateStatus('ready');
+
+      // Inject bootstrap
+      await this.bootstrapKernel();
     });
   }
 
