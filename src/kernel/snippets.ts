@@ -1,6 +1,14 @@
 export function getBootstrapSnippet(viewTag: string, detailTag: string): string {
   return `
 def __vexp_setup():
+    import builtins as _b
+    def _noop(*args, **kwargs):
+        pass
+    if not hasattr(_b, '__vexp_view'):
+        _b.__vexp_view = _noop
+    if not hasattr(_b, '__vexp_detail'):
+        _b.__vexp_detail = _noop
+
     import json as _json
     from spyder_kernels.utils.nsview import make_remote_view, value_to_display
 

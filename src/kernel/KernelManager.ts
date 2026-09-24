@@ -44,6 +44,7 @@ export class KernelManager {
 
   // Bootstrap msg_id — used to detect errors on the bootstrap execution
   private bootstrapMsgId: string | null = null;
+  private silentMsgIds: Set<string> = new Set();
 
   constructor(private context: vscode.ExtensionContext) {
     const sessionToken = Math.random().toString(36).substring(2, 10);
@@ -314,27 +315,22 @@ export class KernelManager {
     console.log("Bootstrapping kernel with spyder-kernels helper functions...");
     const bootstrapCode = getBootstrapSnippet(this.viewTag, this.detailTag);
 
-    // Capture the bootstrap requestId so we can detect its error reply
-    const bootstrapRequestId = this.nextRequestId;
     this.bootstrapMsgId = null;
-    const sentHandler = (msgId: string) => { this.bootstrapMsgId = msgId; };
-    (this as any)[`req_sent_${bootstrapRequestId}`] = (msgId: string) => {
-      this.bootstrapMsgId = msgId;
-      sentHandler(msgId);
-    };
+    this.bootstrapSucceeded = true;
 
-    await this.executeRaw(bootstrapCode, true, false);
-
-    if (!this.bootstrapSucceeded) {
-      // executeRaw resolved (execute_reply came back) — check if it was an error
-      // bootstrapSucceeded is set to true only if no ModuleNotFoundError was detected
-      // If we reach here and it's still false, bootstrap ran but produced no error we caught
-      // (i.e. it silently succeeded — mark it good)
-      this.bootstrapSucceeded = true;
+    try {
+      await this.executeRaw(bootstrapCode, true, false, (msgId) => {
+        this.bootstrapMsgId = msgId;
+      });
+    } catch (e) {
+      this.bootstrapSucceeded = false;
+      console.warn("Bootstrap execution failed:", e);
     }
 
-    console.log("Bootstrap complete. Refreshing initial variables view.");
-    await this.refreshVariables();
+    if (this.bootstrapSucceeded) {
+      console.log("Bootstrap complete. Refreshing initial variables view.");
+      await this.refreshVariables();
+    }
   }
 
   /**
@@ -355,7 +351,12 @@ export class KernelManager {
   /**
    * Directly executes code and returns a promise resolving when execution completes.
    */
-  private executeRaw(code: string, silent: boolean, storeHistory: boolean): Promise<void> {
+  private executeRaw(
+    code: string,
+    silent: boolean,
+    storeHistory: boolean,
+    onMsgId?: (msgId: string) => void
+  ): Promise<void> {
     if (!this.process) {
       return Promise.reject(new Error("Kernel is not running."));
     }
@@ -364,18 +365,29 @@ export class KernelManager {
 
     return new Promise<void>((resolve, reject) => {
       let timeoutHandle: NodeJS.Timeout | null = null;
+      let assignedMsgId: string | null = null;
 
       const cleanup = (msgId?: string) => {
         if (timeoutHandle) {
           clearTimeout(timeoutHandle);
           timeoutHandle = null;
         }
-        if (msgId) {
-          this.requestResolveMap.delete(msgId);
+        const id = msgId || assignedMsgId;
+        if (id) {
+          this.requestResolveMap.delete(id);
+          this.silentMsgIds.delete(id);
         }
       };
 
       const onSent = (msgId: string) => {
+        assignedMsgId = msgId;
+        if (silent) {
+          this.silentMsgIds.add(msgId);
+        }
+        if (onMsgId) {
+          onMsgId(msgId);
+        }
+
         // Start the 30s timeout once we know the kernel accepted the request
         timeoutHandle = setTimeout(() => {
           cleanup(msgId);
@@ -473,8 +485,8 @@ export class KernelManager {
       
       const content = payload.content;
       if (content && content.status === 'error') {
-        // Detect bootstrap failure (spyder_kernels not installed)
-        if (msgId && msgId === this.bootstrapMsgId && content.ename === 'ModuleNotFoundError') {
+        // Detect bootstrap failure (spyder_kernels not installed or import error)
+        if (msgId && msgId === this.bootstrapMsgId) {
           this.bootstrapSucceeded = false;
           vscode.window.showErrorMessage(
             "spyder-kernels not found in the selected Python environment. " +
@@ -485,11 +497,17 @@ export class KernelManager {
               vscode.env.clipboard.writeText("pip install spyder-kernels==3.1.4");
             }
           });
-        } else {
-          for (const listener of this.listeners) {
-            if (listener.onError) {
-              listener.onError(content.ename, content.evalue, content.traceback || []);
-            }
+          return;
+        }
+
+        // Suppress errors from internal silent commands from leaking into the console
+        if (msgId && this.silentMsgIds.has(msgId)) {
+          return;
+        }
+
+        for (const listener of this.listeners) {
+          if (listener.onError) {
+            listener.onError(content.ename, content.evalue, content.traceback || []);
           }
         }
       }
@@ -553,6 +571,10 @@ export class KernelManager {
           }
         }
       } else if (msgType === 'error') {
+        // Suppress internal silent or bootstrap errors from leaking into the user console
+        if (msgId && (this.silentMsgIds.has(msgId) || msgId === this.bootstrapMsgId)) {
+          return;
+        }
         for (const listener of this.listeners) {
           if (listener.onError) {
             listener.onError(content.ename, content.evalue, content.traceback || []);
