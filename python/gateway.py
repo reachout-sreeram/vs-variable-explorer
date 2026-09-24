@@ -70,10 +70,24 @@ def main():
     sys.stderr.write("Starting Gateway...\n")
     sys.stderr.flush()
     
+    # Optional cwd for IPython kernel
+    kernel_cwd = None
+    if "--cwd" in sys.argv:
+        try:
+            cwd_idx = sys.argv.index("--cwd")
+            if cwd_idx + 1 < len(sys.argv):
+                kernel_cwd = sys.argv[cwd_idx + 1]
+        except Exception as e:
+            sys.stderr.write(f"Error parsing --cwd argument: {e}\n")
+            sys.stderr.flush()
+
     # 1. Initialize Kernel Manager
     km = CustomKernelManager(kernel_name="python3")
     try:
-        km.start_kernel()
+        if kernel_cwd:
+            km.start_kernel(cwd=kernel_cwd)
+        else:
+            km.start_kernel()
     except Exception as e:
         print_json({"type": "error", "message": f"Failed to start IPython kernel: {str(e)}"})
         return

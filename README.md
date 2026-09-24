@@ -45,6 +45,12 @@ pip install jupyter_client ipykernel pyzmq spyder-kernels==3.1.4
 | Clear console (`Ctrl/Cmd+K`) | `Variables: Clear Console` |
 | Reset kernel namespace | `Variables: Clear Variables` |
 
+## Configuration
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| `varexp.workingDirectory` | `${workspaceFolder}` | Initial working directory for the IPython kernel. Supports `${workspaceFolder}`, `${fileDirname}`, or a custom absolute path. |
+
 ## Issues & contributing
 
 Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md).

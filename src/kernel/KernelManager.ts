@@ -1,5 +1,7 @@
 import * as child_process from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 import * as vscode from 'vscode';
 import * as readline from 'readline';
 import { PythonExtension } from '@vscode/python-extension';
@@ -70,9 +72,73 @@ export class KernelManager {
   }
 
   private resolvedPythonPath = 'python';
+  private workingDirectory: string | null = null;
 
   public getPythonPath(): string {
     return this.resolvedPythonPath;
+  }
+
+  public getWorkingDirectory(): string {
+    if (this.workingDirectory) {
+      return this.workingDirectory;
+    }
+    return this.resolveWorkingDirectory();
+  }
+
+  public resolveWorkingDirectory(): string {
+    const config = vscode.workspace.getConfiguration('varexp');
+    const customCwd = config.get<string>('workingDirectory')?.trim();
+
+    const activeEditor = vscode.window.activeTextEditor;
+    const activeFileUri = activeEditor?.document?.uri;
+
+    let workspaceFolder: string | undefined;
+    if (activeFileUri && activeFileUri.scheme === 'file') {
+      workspaceFolder = vscode.workspace.getWorkspaceFolder(activeFileUri)?.uri.fsPath;
+    }
+    if (!workspaceFolder && vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+      workspaceFolder = vscode.workspace.workspaceFolders[0].uri.fsPath;
+    }
+
+    let fileDirname: string | undefined;
+    if (activeFileUri && activeFileUri.scheme === 'file') {
+      fileDirname = path.dirname(activeFileUri.fsPath);
+    }
+
+    if (customCwd) {
+      let resolved = customCwd;
+      if (workspaceFolder) {
+        resolved = resolved.replace(/\$\{workspaceFolder\}/g, workspaceFolder);
+      }
+      if (fileDirname) {
+        resolved = resolved.replace(/\$\{fileDirname\}/g, fileDirname);
+      }
+      if (resolved.startsWith('~/') || resolved === '~') {
+        resolved = path.join(os.homedir(), resolved.slice(1));
+      }
+      resolved = path.normalize(resolved);
+      if (fs.existsSync(resolved)) {
+        return resolved;
+      }
+      if (customCwd !== '${workspaceFolder}' || workspaceFolder) {
+        console.warn(`[Variable Explorer] Configured workingDirectory "${customCwd}" resolved to "${resolved}" which does not exist. Falling back.`);
+      }
+    }
+
+    if (workspaceFolder && fs.existsSync(workspaceFolder)) {
+      return workspaceFolder;
+    }
+
+    if (fileDirname && fs.existsSync(fileDirname)) {
+      return fileDirname;
+    }
+
+    const home = os.homedir();
+    if (home && fs.existsSync(home)) {
+      return home;
+    }
+
+    return this.context.extensionPath;
   }
 
   public async start(): Promise<void> {
@@ -96,12 +162,15 @@ export class KernelManager {
     }
     this.resolvedPythonPath = pythonPath;
 
+    const workingDir = this.resolveWorkingDirectory();
+    this.workingDirectory = workingDir;
+
     const gatewayScript = path.join(this.context.extensionPath, 'python', 'gateway.py');
-    console.log(`Spawning gateway: ${pythonPath} -u ${gatewayScript}`);
+    console.log(`Spawning gateway: ${pythonPath} -u ${gatewayScript} --cwd ${workingDir}`);
 
     // 2. Spawn python gateway
-    const proc = child_process.spawn(pythonPath, ['-u', gatewayScript], {
-      cwd: this.context.extensionPath
+    const proc = child_process.spawn(pythonPath, ['-u', gatewayScript, '--cwd', workingDir], {
+      cwd: workingDir
     });
     this.process = proc;
 
@@ -197,6 +266,7 @@ export class KernelManager {
               proc.kill();
               if (this.process === proc) {
                 this.process = null;
+                this.workingDirectory = null;
                 this.updateStatus('starting');
               }
               rl.close();
@@ -215,6 +285,7 @@ export class KernelManager {
         console.log(`Gateway process closed with code ${code}`);
         if (this.process === proc) {
           this.process = null;
+          this.workingDirectory = null;
           this.updateStatus('starting');
         }
         rl.close();
@@ -231,6 +302,7 @@ export class KernelManager {
     if (this.process) {
       this.process.stdin?.write(JSON.stringify({ action: 'shutdown' }) + '\n');
       this.process = null;
+      this.workingDirectory = null;
     }
   }
 

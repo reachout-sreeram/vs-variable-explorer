@@ -42,6 +42,16 @@
   ],
   "activationEvents": [],
   "contributes": {
+    "configuration": {
+      "title": "Variable Explorer",
+      "properties": {
+        "varexp.workingDirectory": {
+          "type": "string",
+          "default": "${workspaceFolder}",
+          "description": "Initial working directory for the IPython kernel. Supports ${workspaceFolder}, ${fileDirname}, or an absolute path. Defaults to ${workspaceFolder}."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {
